@@ -66,20 +66,24 @@ SetLogicMatcher::SetLogicMatcher(
   }
 }
 
-bool SetLogicMatcher::updateLocalStatus(std::vector<bool>& statuses,
-                                        const UpdateFunctor& functor) const {
+Matcher::MatchStatus SetLogicMatcher::updateLocalStatus(MatchStatusVector& statuses,
+                                                        const UpdateFunctor& functor) const {
   for (size_t index : indexes_) {
     statuses[index] = functor(*matchers_[index], statuses);
   }
 
-  auto predicate = [&statuses](size_t index) { return statuses[index]; };
+  auto predicate = [&statuses](size_t index) { return statuses[index].matches_; };
   if (type_ == Type::And) {
-    statuses[my_index_] = std::all_of(indexes_.begin(), indexes_.end(), predicate);
+    statuses[my_index_].matches_ = std::all_of(indexes_.begin(), indexes_.end(), predicate);
   } else {
     ASSERT(type_ == Type::Or);
-    statuses[my_index_] = std::any_of(indexes_.begin(), indexes_.end(), predicate);
+    statuses[my_index_].matches_ = std::any_of(indexes_.begin(), indexes_.end(), predicate);
   }
 
+  /*might_change_status_ = std::any_of(indexes_.begin(), indexes_.end(), [this](size_t index)
+                                                                                            {
+    return matchers_[index]->mightChangeStatus();
+                                                                                            });fixfix*/
   return statuses[my_index_];
 }
 
@@ -89,9 +93,9 @@ NotMatcher::NotMatcher(const envoy::service::tap::v2alpha::MatchPredicate& confi
   buildMatcher(config, matchers);
 }
 
-bool NotMatcher::updateLocalStatus(std::vector<bool>& statuses,
-                                   const UpdateFunctor& functor) const {
-  statuses[my_index_] = !functor(*matchers_[not_index_], statuses);
+Matcher::MatchStatus NotMatcher::updateLocalStatus(MatchStatusVector& statuses,
+                                                   const UpdateFunctor& functor) const {
+  statuses[my_index_].matches_ = !functor(*matchers_[not_index_], statuses);
   return statuses[my_index_];
 }
 
@@ -104,9 +108,9 @@ HttpHeaderMatcherBase::HttpHeaderMatcherBase(
   }
 }
 
-bool HttpHeaderMatcherBase::matchHeaders(const Http::HeaderMap& headers,
-                                         std::vector<bool>& statuses) const {
-  statuses[my_index_] = Http::HeaderUtility::matchHeaders(headers, headers_to_match_);
+Matcher::MatchStatus HttpHeaderMatcherBase::matchHeaders(const Http::HeaderMap& headers,
+                                                         MatchStatusVector& statuses) const {
+  statuses[my_index_].matches_ = Http::HeaderUtility::matchHeaders(headers, headers_to_match_);
   return statuses[my_index_];
 }
 

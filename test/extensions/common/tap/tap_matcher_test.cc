@@ -15,7 +15,7 @@ namespace {
 class TapMatcherTest : public testing::Test {
 public:
   std::vector<MatcherPtr> matchers_;
-  std::vector<bool> statuses_;
+  MatchStatusVector statuses_;
   envoy::service::tap::v2alpha::MatchPredicate config_;
   Http::TestHeaderMapImpl headers_;
 };
